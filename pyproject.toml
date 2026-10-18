@@ -1,0 +1,56 @@
+[build-system]
+requires = ["setuptools>=80"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "edge-inference-optimization"
+version = "0.1.0"
+description = "Cut model-serving cost by running on cheap CPUs instead of GPUs: quantization and distillation, measured for the accuracy you trade away."
+readme = "README.md"
+license = "MIT"
+requires-python = ">=3.11"
+# torch is installed first from the PyTorch index (CPU in CI, CUDA 13.0 locally): see the Makefile.
+dependencies = [
+  "torch>=2.9",
+  "transformers>=5.0,<6",
+  "safetensors>=0.6",
+  "pyarrow>=20",
+]
+
+[project.optional-dependencies]
+# Only for the GPU run: bitsandbytes kernels, device placement and the energy counter.
+gpu = ["bitsandbytes>=0.48", "accelerate>=1.10", "nvidia-ml-py>=13"]
+dev = ["pytest>=8", "pytest-timeout>=2.3", "ruff>=0.6", "mypy>=1.11", "pip-audit>=2.7"]
+
+[project.scripts]
+eio = "edge_inference_optimization.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+edge_inference_optimization = ["py.typed"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+timeout = 300
+addopts = "-p no:cacheprovider"
+
+[tool.ruff]
+line-length = 140
+extend-exclude = [".tmp", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "S", "SIM", "RUF", "N", "C4", "PT", "RET", "PIE", "PERF"]
+ignore = ["E501"]
+
+[tool.ruff.lint.per-file-ignores]
+"tests/**" = ["S101"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests"]
+
+[[tool.mypy.overrides]]
+module = ["bitsandbytes.*", "pynvml.*", "pyarrow.*"]
+ignore_missing_imports = true

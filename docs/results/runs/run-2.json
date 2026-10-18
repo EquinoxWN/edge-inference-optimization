@@ -1,0 +1,156 @@
+{
+ "meta": {
+  "model": "distilbert/distilbert-base-uncased-finetuned-sst-2-english",
+  "revision": "714eb0fa89d2f80546fda750413ed43d93601a13",
+  "dataset": "GLUE SST-2 validation",
+  "dataset_sha256": "a1371f3b3a7b0bcefa8388799a9359dc3ce76c349cc0079507a7991364fd2a9b",
+  "examples": 872,
+  "device": "NVIDIA GeForce RTX 4050 Laptop GPU",
+  "torch": "2.14.1+cu130",
+  "python": "3.14.5",
+  "settings": {
+   "max_len": 128,
+   "eval_batch": 64,
+   "latency_requests": 300,
+   "latency_warmup": 30,
+   "throughput_batch": 32,
+   "throughput_repeats": 3,
+   "gpu_warmup_seconds": 20.0
+  },
+  "model_deleted_after_run": true
+ },
+ "variants": [
+  {
+   "name": "fp32",
+   "device": "cuda:0",
+   "accuracy": 0.9105504587155964,
+   "correct": 794,
+   "total": 872,
+   "weight_mib": 255.42,
+   "quantized_layers": 0,
+   "agreement": null,
+   "flips": null,
+   "peak_vram_mib": 379.3,
+   "p50_ms": 4.41,
+   "p95_ms": 6.01,
+   "throughput": 600.1,
+   "throughput_rounds": [
+    527.0,
+    600.1,
+    655.8
+   ],
+   "wh_per_1k": 0.0135,
+   "sm_clock_mhz": 1095
+  },
+  {
+   "name": "fp16",
+   "device": "cuda:0",
+   "accuracy": 0.9105504587155964,
+   "correct": 794,
+   "total": 872,
+   "weight_mib": 127.71,
+   "quantized_layers": 0,
+   "agreement": 1.0,
+   "flips": 0,
+   "peak_vram_mib": 196.2,
+   "p50_ms": 4.11,
+   "p95_ms": 5.53,
+   "throughput": 2097.9,
+   "throughput_rounds": [
+    2097.9,
+    1979.1,
+    2172.9
+   ],
+   "wh_per_1k": 0.0033,
+   "sm_clock_mhz": 1290
+  },
+  {
+   "name": "int8-rtn",
+   "device": "cuda:0",
+   "accuracy": 0.9094036697247706,
+   "correct": 793,
+   "total": 872,
+   "weight_mib": 87.29,
+   "quantized_layers": 36,
+   "agreement": 0.9988532110091743,
+   "flips": 1,
+   "peak_vram_mib": 153.2,
+   "p50_ms": 6.81,
+   "p95_ms": 9.87,
+   "throughput": 1609.0,
+   "throughput_rounds": [
+    1582.7,
+    1609.0,
+    1732.3
+   ],
+   "wh_per_1k": 0.0044,
+   "sm_clock_mhz": 1320
+  },
+  {
+   "name": "int4-rtn",
+   "device": "cuda:0",
+   "accuracy": 0.9013761467889908,
+   "correct": 786,
+   "total": 872,
+   "weight_mib": 69.49,
+   "quantized_layers": 36,
+   "agreement": 0.9839449541284404,
+   "flips": 14,
+   "peak_vram_mib": 135.4,
+   "p50_ms": 12.12,
+   "p95_ms": 19.4,
+   "throughput": 1373.2,
+   "throughput_rounds": [
+    1289.1,
+    1373.2,
+    1419.7
+   ],
+   "wh_per_1k": 0.0053,
+   "sm_clock_mhz": 1275
+  },
+  {
+   "name": "int8-bnb",
+   "device": "cuda:0",
+   "accuracy": 0.908256880733945,
+   "correct": 792,
+   "total": 872,
+   "weight_mib": 87.21,
+   "quantized_layers": 36,
+   "agreement": 0.9954128440366973,
+   "flips": 4,
+   "peak_vram_mib": 178.1,
+   "p50_ms": 27.99,
+   "p95_ms": 34.4,
+   "throughput": 877.9,
+   "throughput_rounds": [
+    694.9,
+    886.2,
+    877.9
+   ],
+   "wh_per_1k": 0.0076,
+   "sm_clock_mhz": 1680
+  },
+  {
+   "name": "nf4-bnb",
+   "device": "cuda:0",
+   "accuracy": 0.908256880733945,
+   "correct": 792,
+   "total": 872,
+   "weight_mib": 66.96,
+   "quantized_layers": 36,
+   "agreement": 0.9793577981651376,
+   "flips": 18,
+   "peak_vram_mib": 134.7,
+   "p50_ms": 8.19,
+   "p95_ms": 12.87,
+   "throughput": 1805.4,
+   "throughput_rounds": [
+    1726.6,
+    1890.4,
+    1805.4
+   ],
+   "wh_per_1k": 0.0038,
+   "sm_clock_mhz": 1245
+  }
+ ]
+}

@@ -16,7 +16,7 @@ no prediction; int8 changes 1 (round-to-nearest) or 4 (LLM.int8); int4 costs 0.9
 
 ![eio run twice: accuracy, flips, weights, VRAM, latency, throughput and energy per variant](docs/proof/run.jpg)
 
-16 tests pass, ruff and mypy --strict are clean, and pip-audit finds no known vulnerabilities:
+16 tests passed at M1 (22 since the [2026-11-01 quality pass](docs/quality/2026-11-01.md)), ruff and mypy --strict are clean, and pip-audit finds no known vulnerabilities:
 
 ![ruff, mypy, pytest and pip-audit output](docs/proof/tests.jpg)
 
@@ -81,7 +81,7 @@ batched rounds. The model and data are deleted when the run ends.
 | Quantization | Own round-to-nearest int8 (per channel) and int4 (groups of 32, packed); bitsandbytes LLM.int8 and NF4 | ONNX graph optimization (M2) |
 | Measurement | Accuracy, flips, weight bytes, peak VRAM, p50/p95 latency, median-of-3 throughput, NVML energy, SM clock | ONNX Runtime on CPUs, llama.cpp (M3) |
 | Cost | GPU Wh per 1,000 requests | Dollars per 1,000 requests from hardware prices (M3) |
-| Quality | ruff, mypy --strict, 16 tests (CPU, tiny model), pip-audit, CI | |
+| Quality | ruff, mypy --strict, 22 tests (CPU, tiny model), pip-audit, CI | |
 
 Language: **Python 3.11+** (3.12 in CI, 3.14 locally).
 
@@ -104,7 +104,7 @@ caches and the model stay in git-ignored `.tmp/`; use a virtual environment.
 python -m venv .venv && . .venv/Scripts/activate   # Linux/macOS: .venv/bin/activate
 make setup       # CPU torch + dev tools (what CI uses)
 make lint        # ruff, ruff format --check, mypy --strict
-make test        # 16 tests on a tiny random model, no download
+make test        # 22 tests on a tiny random model, no download
 make audit       # pip-audit
 make setup-gpu   # CUDA torch, bitsandbytes, accelerate, nvidia-ml-py
 make run         # all variants on the GPU, about 3 minutes; deletes the model afterwards
@@ -120,9 +120,9 @@ Latest local run (full detail in [docs/results/m1.md](docs/results/m1.md)):
 
 | Test file | Tests | What it proves |
 |---|---|---|
-| `tests/test_quant.py` | 6 | int8 and int4 error bounds, exact int4 packing, per-group scales, layer outputs close to float, head kept, weights shrink |
-| `tests/test_bench.py` | 4 | Variants end to end on a tiny model, deterministic predictions, GPU-only variants refused on CPU, energy arithmetic |
-| `tests/test_io.py` | 6 | Data schema checks, hash and HTTPS enforcement, cache containment, results table, purge limited to `.tmp` |
+| `tests/test_quant.py` | 6 | int8 and int4 error bounds, exact int4 packing, per-group scales and odd groups refused, layer outputs close to float, head kept, weights shrink |
+| `tests/test_bench.py` | 6 | Variants end to end on a tiny model, deterministic predictions, GPU-only variants refused on CPU, energy arithmetic, the p95 index, every variant compared with the first |
+| `tests/test_io.py` | 10 | Data schema checks, hash and HTTPS enforcement, cache containment, results table, purge limited to `.tmp`, oversized downloads refused without a partial file, bad results files refused, atomic results write |
 
 | Variant | Accuracy | vs fp32 | Flipped | Weights | Sentences/s (run 1 / 2) | GPU Wh per 1k (run 1 / 2) |
 |---|---|---|---|---|---|---|
@@ -135,7 +135,7 @@ Latest local run (full detail in [docs/results/m1.md](docs/results/m1.md)):
 
 | Check | Result |
 |---|---|
-| Tests | 16 passed, 0 failed |
+| Tests | 22 passed, 0 failed |
 | Lint and types | ruff, ruff format, mypy --strict: clean |
 | Audit | pip-audit: no known vulnerabilities (torch 2.14.1 audited separately: none) |
 | Repeatability | accuracy identical in four runs; throughput within 17% between the two final runs (up to 4.6x before the warm-up fix) |
@@ -183,6 +183,7 @@ What this repo must show before it counts as done:
 - [ADR 0001: record architecture decisions](docs/adr/0001-record-architecture-decisions.md)
 - [ADR 0002: measure an own round-to-nearest quantizer next to bitsandbytes](docs/adr/0002-own-rtn-quantizer-and-bitsandbytes.md)
 - [M1 results](docs/results/m1.md)
+- [Quality check 2026-11-01](docs/quality/2026-11-01.md): the ten quality rules with evidence and a mutation table
 
 ## Scope
 

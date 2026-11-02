@@ -2,8 +2,10 @@
 
 from __future__ import annotations
 
+import io
 import json
 import os
+import urllib.request
 from collections.abc import Sequence
 from pathlib import Path
 
@@ -13,7 +15,7 @@ import pytest
 
 from edge_inference_optimization import cli, env
 from edge_inference_optimization.data import load_parquet
-from edge_inference_optimization.sources import MODEL_FILES, VALIDATION, Pinned, fetch, sha256_of, verify
+from edge_inference_optimization.sources import MODEL_FILES, VALIDATION, Pinned, copy_limited, fetch, sha256_of, verify
 
 
 def write_parquet(path: Path, sentences: Sequence[object], labels: Sequence[object]) -> Path:
@@ -94,3 +96,46 @@ def test_purge_only_touches_tmp(capsys: pytest.CaptureFixture[str]) -> None:
     assert data_dir.is_relative_to(env.tmp_dir())
     assert cli.main(["purge"]) == 0
     assert "removed" in capsys.readouterr().out
+
+
+def test_copy_limited_refuses_a_longer_body() -> None:
+    out = io.BytesIO()
+    copy_limited(io.BytesIO(b"12345"), out, 5)
+    assert out.getvalue() == b"12345"
+    with pytest.raises(ValueError, match="larger than the pinned 4 bytes"):
+        copy_limited(io.BytesIO(b"12345"), io.BytesIO(), 4)
+
+
+def test_failed_download_leaves_no_partial_file(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
+    def oversized(*_a: object, **_k: object) -> io.BytesIO:
+        return io.BytesIO(b"x" * 10)
+
+    monkeypatch.setattr(urllib.request, "urlopen", oversized)
+    with pytest.raises(ValueError, match="larger"):
+        fetch(Pinned("m.bin", "https://example.invalid/m.bin", 4, "0" * 64), tmp_path)
+    assert list(tmp_path.iterdir()) == []
+
+
+def test_show_refuses_bad_results_files(tmp_path: Path, capsys: pytest.CaptureFixture[str]) -> None:
+    bad = {
+        "missing.json": None,
+        "notjson.json": "{",
+        "empty.json": json.dumps({"variants": []}),
+        "partial.json": json.dumps({"variants": [{"name": "fp32", "accuracy": 1.0}]}),
+    }
+    for name, text in bad.items():
+        f = tmp_path / name
+        if text is not None:
+            f.write_text(text, encoding="utf-8")
+        with pytest.raises(SystemExit) as e:
+            cli.main(["show", str(f)])
+        assert e.value.code == 2
+        assert name in capsys.readouterr().err
+
+
+def test_write_atomic_replaces_whole_file(tmp_path: Path) -> None:
+    out = tmp_path / "sub" / "r.json"
+    cli.write_atomic(out, "first")
+    cli.write_atomic(out, "second")
+    assert out.read_text(encoding="utf-8") == "second"
+    assert [p.name for p in out.parent.iterdir()] == ["r.json"]

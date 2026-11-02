@@ -51,6 +51,8 @@ def test_int4_groups_and_error() -> None:
     assert float(err[:, 0].max()) < 0.5  # the small group is not ruined by the large one
     with pytest.raises(ValueError, match="multiple"):
         quantize_int4(torch.randn(4, 30), 32)
+    with pytest.raises(ValueError, match="even group"):
+        quantize_int4(torch.randn(4, 9), 3)  # 9 is a multiple of 3, but two values share a byte
 
 
 @pytest.mark.parametrize(("bits", "tol"), [(8, 0.02), (4, 0.25)])

@@ -3,10 +3,10 @@
 from __future__ import annotations
 
 import hashlib
-import shutil
 import urllib.request
 from dataclasses import dataclass
 from pathlib import Path
+from typing import BinaryIO
 
 HF = "https://huggingface.co"
 MAX_DOWNLOAD = 512 * 1024 * 1024
@@ -66,6 +66,16 @@ def verify(path: Path, p: Pinned) -> None:
         raise ValueError(f"{path.name}: SHA-256 {got}, expected {p.sha256}")
 
 
+def copy_limited(src: BinaryIO, dst: BinaryIO, size: int) -> None:
+    """Copy at most size bytes; a longer body is refused instead of filling the disk."""
+    left = size
+    while chunk := src.read(min(1 << 20, left + 1)):
+        left -= len(chunk)
+        if left < 0:
+            raise ValueError(f"download larger than the pinned {size} bytes")
+        dst.write(chunk)
+
+
 def fetch(p: Pinned, dest_dir: Path) -> Path:
     """Download over HTTPS once, then check size and hash; a bad file is deleted."""
     if not p.url.startswith("https://") or p.size > MAX_DOWNLOAD:
@@ -75,8 +85,12 @@ def fetch(p: Pinned, dest_dir: Path) -> Path:
     if not out.exists():
         part = out.with_suffix(out.suffix + ".part")
         req = urllib.request.Request(p.url, headers={"User-Agent": "edge-inference-optimization"})  # noqa: S310 (https only, checked above)
-        with urllib.request.urlopen(req, timeout=60) as resp, part.open("wb") as f:  # noqa: S310 (https only, checked above)
-            shutil.copyfileobj(resp, f, length=1 << 20)
+        try:
+            with urllib.request.urlopen(req, timeout=60) as resp, part.open("wb") as f:  # noqa: S310 (https only, checked above)
+                copy_limited(resp, f, p.size)
+        except BaseException:
+            part.unlink(missing_ok=True)  # never leave a partial download behind
+            raise
         part.replace(out)
     try:
         verify(out, p)

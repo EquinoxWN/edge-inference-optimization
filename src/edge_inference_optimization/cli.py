@@ -43,6 +43,34 @@ def purge() -> list[str]:
     return removed
 
 
+def write_atomic(path: Path, text: str) -> None:
+    """Write through a temporary file and rename, so a crash never leaves half a results file."""
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_name(path.name + ".tmp")
+    tmp.write_text(text, encoding="utf-8")
+    tmp.replace(path)
+
+
+RESULT_KEYS = frozenset(
+    {"name", "accuracy", "correct", "total", "flips", "weight_mib", "peak_vram_mib", "p50_ms", "p95_ms", "throughput", "wh_per_1k"}
+)
+
+
+def load_results(path: Path) -> list[dict[str, Any]]:
+    """The variants of a results file, with a clear error for a missing or malformed file."""
+    try:
+        doc = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise ValueError(f"{path}: cannot read results: {e}") from e
+    variants = doc.get("variants") if isinstance(doc, dict) else None
+    if not isinstance(variants, list) or not variants or not all(isinstance(v, dict) for v in variants):
+        raise ValueError(f"{path}: expected a non-empty 'variants' list")
+    for v in variants:
+        if missing := RESULT_KEYS - v.keys():
+            raise ValueError(f"{path}: variant {v.get('name')!r} lacks {sorted(missing)}")
+    return variants
+
+
 def table(results: Sequence[dict[str, Any]]) -> str:
     """Markdown table of a run."""
 
@@ -96,8 +124,7 @@ def run(args: argparse.Namespace) -> int:
     }
     doc: dict[str, Any] = {"meta": meta, "variants": [r.to_dict() for r in results]}
     out = env.ensure_inside(Path(args.out), env.repo_root())
-    out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(doc, indent=1) + "\n", encoding="utf-8")
+    write_atomic(out, json.dumps(doc, indent=1) + "\n")
     print(table(doc["variants"]))
     print(f"wrote {out.relative_to(env.repo_root())}")
     return 0
@@ -128,8 +155,11 @@ def main(argv: Sequence[str] | None = None) -> int:
             p.error("--limit must be positive")
         return run(args)
     elif args.cmd == "show":
-        doc = json.loads(Path(args.file).read_text(encoding="utf-8"))
-        print(table(doc["variants"]))
+        try:
+            variants = load_results(Path(args.file))
+        except ValueError as e:
+            p.error(str(e))
+        print(table(variants))
     else:
         print("removed: " + (", ".join(purge()) or "nothing"))
     return 0

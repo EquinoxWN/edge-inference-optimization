@@ -129,6 +129,13 @@ def latency_ms(
         _sync(device)
         if i >= s.latency_warmup:
             times.append((time.perf_counter() - t0) * 1000)
+    return p50_p95(times)
+
+
+def p50_p95(times: Sequence[float]) -> tuple[float, float]:
+    """Median and 95th percentile (inclusive method) of at least two samples."""
+    if len(times) < 2:
+        raise ValueError("need at least two latency samples")
     q = statistics.quantiles(times, n=20, method="inclusive")
     return statistics.median(times), q[18]
 
